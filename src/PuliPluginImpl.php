@@ -158,7 +158,21 @@ class PuliPluginImpl
         if (!file_exists($factoryFile)) {
             $filesystem = new Filesystem();
             // Let Composer find the factory class with a temporary stub
-            $filesystem->dumpFile($factoryFile, '<?php class '.$factoryClass.' {}');
+
+            $normalizedFQCN = ltrim($factoryClass, '\\');
+            $parts = explode('\\', $factoryClass);
+
+            $shortName = array_pop($parts);
+
+            if (count($parts) === 0) {
+                // No namespace
+                $filesystem->dumpFile($factoryFile, '<?php class '.$shortName.' {}');
+            } else {
+                // $factoryClass is a FQCN
+                $ns = implode('\\', $parts);
+
+                $filesystem->dumpFile($factoryFile, '<?php namespace '.$ns.'; class '.$shortName.' {}');
+            }
         }
     }
 
