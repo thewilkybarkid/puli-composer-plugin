@@ -103,11 +103,6 @@ class PuliPluginImpl
      */
     private $initialized = false;
 
-    /**
-     * @var string
-     */
-    private $autoloadFile;
-
     public function __construct(Event $event, PuliRunner $puliRunner = null)
     {
         $this->composer = $event->getComposer();
@@ -116,14 +111,6 @@ class PuliPluginImpl
         $this->isDev = $event->isDevMode();
         $this->puliRunner = $puliRunner;
         $this->rootDir = Path::normalize(getcwd());
-
-        $vendorDir = $this->config->get('vendor-dir');
-
-        // On TravisCI, $vendorDir is a relative path. Probably an old Composer
-        // build or something. Usually, $vendorDir should be absolute already.
-        $vendorDir = Path::makeAbsolute($vendorDir, $this->rootDir);
-
-        $this->autoloadFile = $vendorDir.'/autoload.php';
     }
 
     public function preAutoloadDump()
@@ -193,8 +180,15 @@ class PuliPluginImpl
             return;
         }
 
-        $this->insertFactoryClassConstant($this->autoloadFile, $factoryClass);
-        $this->setBootstrapFile($this->autoloadFile);
+        $vendorDir = $this->config->get('vendor-dir');
+
+        // On TravisCI, $vendorDir is a relative path. Probably an old Composer
+        // build or something. Usually, $vendorDir should be absolute already.
+        $vendorDir = Path::makeAbsolute($vendorDir, $this->rootDir);
+
+        $autoloadFile = $vendorDir.'/autoload.php';
+        $this->insertFactoryClassConstant($autoloadFile, $factoryClass);
+        $this->setBootstrapFile($autoloadFile);
     }
 
     /**
@@ -251,13 +245,6 @@ class PuliPluginImpl
 
     private function initialize()
     {
-        if (!file_exists($this->autoloadFile)) {
-            $filesystem = new Filesystem();
-            // Avoid problems if using the runner before autoload.php has been
-            // generated
-            $filesystem->dumpFile($this->autoloadFile, '');
-        }
-
         $this->initialized = true;
 
         // Keep the manually set runner
